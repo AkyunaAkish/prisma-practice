@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String          @id @default(uuid()) // @ symbol are optional attributes
+  name             String? // ? means optional
+  email            String          @unique
+  age              Int
+  role             Role            @default(BASIC)
+  writtenPosts     Post[]          @relation("WrittenPosts")
+  favoritePosts    Post[]          @relation("FavoritePosts")
+  userPreference   UserPreference? @relation(fields: [userPreferenceId], references: [id])
+  userPreferenceId String?         @unique // 1:1 relationship between UserPrefence and User
+
+  // unused examples:
+  // preferences Json
+  // blob        Bytes // file data/big data
+  // example     Unsupported("") this could be needed when converting a unique data type from a different source to a prisma data type (usually done under the hood)
+
+  // block level attributes
+  @@unique([age, name]) // same age and same name can only exist on one user simultaneously 
+  @@index([email]) // sorting/performance will be better for the email field
+}
+
+model UserPreference {
+  id           String  @id @default(uuid())
+  emailUpdates Boolean
+  user         User?
+}
+
+model Post {
+  id            String     @id @default(uuid())
+  title         String
+  averageRating Float
+  rating        Float
+  author        User       @relation("WrittenPosts", fields: [authorId], references: [id])
+  authorId      String // needed for the @relation to work
+  favoritedBy   User?      @relation("FavoritePosts", fields: [favoritedById], references: [id])
+  favoritedById String? // needed for the @relation to work
+  categories    Category[] // prisma will create the needed many to many relationship join tables 
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt // this will automatically update via prisma
+
+  // block level attributes
+  // @@id([title, authorId]) // composite ID of two fields - this would require removing the post id field above
+}
+
+model Category {
+  id    String @id @default(uuid())
+  name  String @unique
+  posts Post[]
+}
+
+enum Role {
+  BASIC
+  ADMIN
+}
